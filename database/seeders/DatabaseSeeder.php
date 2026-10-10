@@ -25,51 +25,59 @@ class DatabaseSeeder extends Seeder
         // ==========================================
         // 1. PENGGUNA RESMI & AKUN DEMO PERAN
         // ==========================================
-        $kades = User::create([
-            'name' => 'H. Asep Komarudin, S.Sos.',
-            'email' => 'kades@kebonpedes.desa.id',
-            'password' => Hash::make('password'),
-            'role' => 'kades',
-            'phone' => '0812-1122-3344',
-            'jabatan' => 'Kepala Desa Kebonpedes',
-            'is_active' => true,
-        ]);
+        $kades = User::updateOrCreate(
+            ['email' => 'kades@kebonpedes.desa.id'],
+            [
+                'name' => config('desa.nama_kades', 'Kepala Desa (contoh)'),
+                'password' => Hash::make('password'),
+                'role' => 'kades',
+                'phone' => '0812-1122-3344',
+                'jabatan' => 'Kepala Desa Kebonpedes',
+                'is_active' => true,
+            ]
+        );
 
-        $rt01 = User::create([
-            'name' => 'Cecep Supriatna',
-            'email' => 'rt01@kebonpedes.desa.id',
-            'password' => Hash::make('password'),
-            'role' => 'rt_rw',
-            'rt' => '01',
-            'rw' => '01',
-            'phone' => '0813-2233-4455',
-            'jabatan' => 'Ketua RT 01 / RW 01',
-            'is_active' => true,
-        ]);
+        $rt01 = User::updateOrCreate(
+            ['email' => 'rt01@kebonpedes.desa.id'],
+            [
+                'name' => 'Bpk. Cecep Supriatna',
+                'password' => Hash::make('password'),
+                'role' => 'rt_rw',
+                'rt' => '01',
+                'rw' => '01',
+                'phone' => '0813-2233-4455',
+                'jabatan' => 'Ketua RT 01 / RW 01',
+                'is_active' => true,
+            ]
+        );
 
-        $rt02 = User::create([
-            'name' => 'Ujang Suherman',
-            'email' => 'rt02@kebonpedes.desa.id',
-            'password' => Hash::make('password'),
-            'role' => 'rt_rw',
-            'rt' => '02',
-            'rw' => '01',
-            'phone' => '0813-5566-7788',
-            'jabatan' => 'Ketua RT 02 / RW 01',
-            'is_active' => true,
-        ]);
+        $rt02 = User::updateOrCreate(
+            ['email' => 'rt02@kebonpedes.desa.id'],
+            [
+                'name' => 'Bpk. Ujang Suherman',
+                'password' => Hash::make('password'),
+                'role' => 'rt_rw',
+                'rt' => '02',
+                'rw' => '01',
+                'phone' => '0813-5566-7788',
+                'jabatan' => 'Ketua RT 02 / RW 01',
+                'is_active' => true,
+            ]
+        );
 
-        $kader = User::create([
-            'name' => 'Ibu Hj. Siti Nurhaliza',
-            'email' => 'kader@kebonpedes.desa.id',
-            'password' => Hash::make('password'),
-            'role' => 'kader',
-            'rt' => '01',
-            'rw' => '01',
-            'phone' => '0857-9988-1122',
-            'jabatan' => 'Ketua Kader Posyandu Melati',
-            'is_active' => true,
-        ]);
+        $kader = User::updateOrCreate(
+            ['email' => 'kader@kebonpedes.desa.id'],
+            [
+                'name' => 'Ibu Hj. Siti Nurhaliza',
+                'password' => Hash::make('password'),
+                'role' => 'kader',
+                'rt' => '01',
+                'rw' => '01',
+                'phone' => '0857-9988-1122',
+                'jabatan' => 'Ketua Kader Posyandu Melati',
+                'is_active' => true,
+            ]
+        );
 
         // ==========================================
         // 2. DATA PENDUDUK (Minimal 40 Data Fiktif)

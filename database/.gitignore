@@ -1,1 +1,2 @@
-*.sqlite*
+# Keep database directory tracked
+!.gitignore

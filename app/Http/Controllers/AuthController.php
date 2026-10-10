@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Artisan;
 use App\Models\User;
 use App\Models\AuditLog;
 
@@ -18,15 +21,24 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
+        // Pastikan database dan seeder sudah terpasang
+        try {
+            if (!Schema::hasTable('users') || User::count() === 0) {
+                Artisan::call('migrate', ['--force' => true]);
+                Artisan::call('db:seed', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {
+            // Abaikan error saat build / non-blocking
+        }
+
         $demoAccounts = [
             [
                 'role_key' => 'kades',
                 'title' => 'Kepala Desa',
-                'name' => 'H. Asep Komarudin, S.Sos.',
+                'name' => config('desa.nama_kades', 'Kepala Desa (contoh)'),
                 'email' => 'kades@kebonpedes.desa.id',
                 'desc' => 'Melihat seluruh data desa, persetujuan surat resmi, audit log, & kelola akun.',
-                'badge' => 'bg-emerald-100 text-emerald-800 border-emerald-300',
-                'icon' => '🏛️',
+                'badge' => 'bg-stone-100 text-slate-800 border-stone-300',
             ],
             [
                 'role_key' => 'rt01',
@@ -34,8 +46,7 @@ class AuthController extends Controller
                 'name' => 'Bpk. Cecep Supriatna',
                 'email' => 'rt01@kebonpedes.desa.id',
                 'desc' => 'Mengelola data penduduk, mutasi warga, & verifikasi KTP khusus wilayah RT 01.',
-                'badge' => 'bg-blue-100 text-blue-800 border-blue-300',
-                'icon' => '🏡',
+                'badge' => 'bg-stone-100 text-slate-800 border-stone-300',
             ],
             [
                 'role_key' => 'rt02',
@@ -43,8 +54,7 @@ class AuthController extends Controller
                 'name' => 'Bpk. Ujang Suherman',
                 'email' => 'rt02@kebonpedes.desa.id',
                 'desc' => 'Mengelola data warga RT 02, verifikasi permohonan surat wilayah RT 02.',
-                'badge' => 'bg-blue-100 text-blue-800 border-blue-300',
-                'icon' => '🏡',
+                'badge' => 'bg-stone-100 text-slate-800 border-stone-300',
             ],
             [
                 'role_key' => 'kader',
@@ -52,8 +62,7 @@ class AuthController extends Controller
                 'name' => 'Ibu Hj. Siti Nurhaliza',
                 'email' => 'kader@kebonpedes.desa.id',
                 'desc' => 'Pencatatan penimbangan balita, pemantauan status gizi, & intervensi stunting.',
-                'badge' => 'bg-amber-100 text-amber-800 border-amber-300',
-                'icon' => '👶',
+                'badge' => 'bg-stone-100 text-slate-800 border-stone-300',
             ],
         ];
 
@@ -74,6 +83,14 @@ class AuthController extends Controller
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
+        // Auto seed if users table empty
+        try {
+            if (!Schema::hasTable('users') || User::count() === 0) {
+                Artisan::call('migrate', ['--force' => true]);
+                Artisan::call('db:seed', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {}
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
@@ -85,11 +102,13 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             // Catat ke Audit Log
-            AuditLog::record(
-                'LOGIN',
-                'Autentikasi',
-                "Pengguna {$user->name} ({$user->role_label}) berhasil masuk ke dalam sistem."
-            );
+            try {
+                AuditLog::record(
+                    'LOGIN',
+                    'Autentikasi',
+                    "Pengguna {$user->name} ({$user->role_label}) berhasil masuk ke dalam sistem."
+                );
+            } catch (\Throwable $e) {}
 
             return redirect()->intended(route('dashboard'))->with('success', "Selamat datang kembali, Bapak/Ibu {$user->name} ({$user->role_label}).");
         }
@@ -115,19 +134,58 @@ class AuthController extends Controller
             return redirect()->route('login')->with('error', 'Pilihan peran demo tidak ditemukan.');
         }
 
-        $user = User::where('email', $emailMap[$roleKey])->first();
+        $email = $emailMap[$roleKey];
+        $user = null;
+
+        try {
+            $user = User::where('email', $email)->first();
+        } catch (\Throwable $e) {
+            // Table might not exist yet
+        }
+
+        // Jika user belum ada di database, jalankan seeder otomatis
         if (!$user) {
-            return redirect()->route('login')->with('error', 'Akun demo belum terpasang. Jalankan seeder.');
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+                Artisan::call('db:seed', ['--force' => true]);
+                $user = User::where('email', $email)->first();
+            } catch (\Throwable $e) {
+                // Fallback pembuatan manual jika seeder error
+            }
+        }
+
+        // Fallback penciptaan user instan jika seeder tidak mengembalikan data
+        if (!$user) {
+            $roleData = [
+                'kades' => ['name' => config('desa.nama_kades', 'Kepala Desa (contoh)'), 'role' => 'kades', 'jabatan' => 'Kepala Desa Kebonpedes'],
+                'rt01' => ['name' => 'Bpk. Cecep Supriatna', 'role' => 'rt_rw', 'rt' => '01', 'rw' => '01', 'jabatan' => 'Ketua RT 01 / RW 01'],
+                'rt02' => ['name' => 'Bpk. Ujang Suherman', 'role' => 'rt_rw', 'rt' => '02', 'rw' => '01', 'jabatan' => 'Ketua RT 02 / RW 01'],
+                'kader' => ['name' => 'Ibu Hj. Siti Nurhaliza', 'role' => 'kader', 'rt' => '01', 'rw' => '01', 'jabatan' => 'Ketua Kader Posyandu'],
+            ];
+
+            $data = $roleData[$roleKey] ?? ['name' => 'Pengguna Demo', 'role' => 'rt_rw', 'jabatan' => 'Perangkat Desa'];
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $email,
+                'password' => Hash::make('password'),
+                'role' => $data['role'],
+                'rt' => $data['rt'] ?? null,
+                'rw' => $data['rw'] ?? null,
+                'jabatan' => $data['jabatan'],
+                'is_active' => true,
+            ]);
         }
 
         Auth::login($user);
         request()->session()->regenerate();
 
-        AuditLog::record(
-            'LOGIN_DEMO',
-            'Autentikasi',
-            "Masuk cepat mode demo sebagai {$user->name} ({$user->role_label})."
-        );
+        try {
+            AuditLog::record(
+                'LOGIN_DEMO',
+                'Autentikasi',
+                "Masuk cepat mode demo sebagai {$user->name} ({$user->role_label})."
+            );
+        } catch (\Throwable $e) {}
 
         return redirect()->route('dashboard')->with('success', "Anda berhasil masuk sebagai {$user->name} ({$user->role_label}).");
     }
@@ -139,17 +197,19 @@ class AuthController extends Controller
     {
         $user = Auth::user();
         if ($user) {
-            AuditLog::record(
-                'LOGOUT',
-                'Autentikasi',
-                "Pengguna {$user->name} telah keluar dari sistem."
-            );
+            try {
+                AuditLog::record(
+                    'LOGOUT',
+                    'Autentikasi',
+                    "Pengguna {$user->name} telah keluar dari sistem."
+                );
+            } catch (\Throwable $e) {}
         }
 
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('home')->with('info', 'Anda telah berhasil keluar dari akun.');
+        return redirect()->route('home')->with('success', 'Anda telah berhasil keluar dari sistem.');
     }
 }
