@@ -1,12 +1,14 @@
 <?php
-try {
-    require __DIR__.'/../vendor/autoload.php';
-    $app = require_once __DIR__.'/../bootstrap/app.php';
-    $request = Illuminate\Http\Request::capture();
-    $response = $app->handleRequest($request);
-    $response->send();
-} catch (\Throwable $e) {
-    echo "<h1>TERTANGKAP!</h1>";
-    echo "<h3>Pesan: " . $e->getMessage() . "</h3>";
-    echo "<p>Lokasi: " . $e->getFile() . " (Baris " . $e->getLine() . ")</p>";
+
+use Illuminate\Http\Request;
+
+define('LARAVEL_START', microtime(true));
+
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
 }
+
+require __DIR__.'/../vendor/autoload.php';
+
+(require_once __DIR__.'/../bootstrap/app.php')
+    ->handleRequest(Request::capture());
