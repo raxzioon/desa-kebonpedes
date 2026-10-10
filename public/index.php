@@ -20,7 +20,6 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 try {
     $app->handleRequest(Request::capture());
 } catch (\Throwable $e) {
-    echo "<h1>ERROR ASLI:</h1>";
-    echo "<h2>" . $e->getMessage() . "</h2>";
-    echo "<p>Lokasi: " . $e->getFile() . " (Baris " . $e->getLine() . ")</p>";
+    echo "<h1>BONGKAR SEMUA ERROR:</h1>";
+    echo "<pre style='white-space: pre-wrap; word-wrap: break-word;'>" . $e . "</pre>";
 }
