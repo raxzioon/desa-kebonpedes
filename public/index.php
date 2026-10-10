@@ -17,4 +17,10 @@ require __DIR__.'/../vendor/autoload.php';
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+try {
+    $app->handleRequest(Request::capture());
+} catch (\Throwable $e) {
+    echo "<h1>ERROR ASLI:</h1>";
+    echo "<h2>" . $e->getMessage() . "</h2>";
+    echo "<p>Lokasi: " . $e->getFile() . " (Baris " . $e->getLine() . ")</p>";
+}
